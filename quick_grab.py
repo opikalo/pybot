@@ -12,7 +12,6 @@ import win32api,win32con
 
 import time
 import matplotlib
-matplotlib.use("qt4agg")
 
 from matplotlib.pylab import subplots,close
 from matplotlib import cm
@@ -82,7 +81,9 @@ def screen_grab(template, save=False, save_name=''):
 
 
 class HarpoonLagoon(object):
-    def __init__(self):
+    def __init__(self, pos_queue, lock):
+        self.pos_queue = pos_queue
+        self.lock = lock
         #determine initial dimension of the game
         start_template = cv2.imread('game_snapshot.png', 0)
         self.box = screen_grab(start_template)
@@ -97,41 +98,9 @@ class HarpoonLagoon(object):
         self.p1 = cv2.imread('large_pleco.png', 0)
         self.p2 = numpy.fliplr(self.p1)
 
-        self.display_setup()
-
         self.start_fishing()
 
-    def display_setup(self):
-        self.fig, self.ax = subplots(1,1)
-        self.ax.set_aspect('equal')
 
-        self.ax.set_xlim(0,600)
-        self.ax.set_ylim(0,500)
-        self.ax.hold(True)
-        self.fig.canvas.draw()
-
-
-        # cache the background
-        self.background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
-
-        self.plt = self.ax.plot([300],[250],'o')[0]
-
-        pylab.ion()
-
-    def show_pos(self,x,y):
-        self.plt.set_data(x,y)
-
-        # restore background
-        self.fig.canvas.restore_region(self.background)
-
-        # redraw just the points
-        self.ax.draw_artist(self.plt)
-
-        # fill in the axes rectangle
-        self.fig.canvas.blit(self.ax.bbox)
-
-        pylab.show()
-        time.sleep(1)
 
     def start_fishing(self):
         self.mouse_pos(300, 333)
@@ -144,6 +113,9 @@ class HarpoonLagoon(object):
             for tuna in find_images(self.snapshot, t, 0.6):
                 pos_x.append(tuna[0])
                 pos_y.append(tuna[1])
+                
+        self.pos_queue.put([pos_x, pos_y])
+
                 #self.mouse_pos(tuna[0], tuna[1])
 
                 # if tuna[0] < 300:
@@ -163,8 +135,6 @@ class HarpoonLagoon(object):
 
         #             self.fire()
 
-        self.show_pos(pos_x, pos_y)
-            
     def run(self):
         while True:
             start_time = timeit.default_timer()
@@ -173,7 +143,6 @@ class HarpoonLagoon(object):
             
             #self.fire()
             elapsed = timeit.default_timer() - start_time
-            time.sleep(1)
             print elapsed
             
             
