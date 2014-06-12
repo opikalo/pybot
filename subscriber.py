@@ -98,4 +98,5 @@ if __name__ == '__main__':
 
         time.sleep(.1)
 
-    subscriber_proc.join()
+
+    #subscriber_proc.join()

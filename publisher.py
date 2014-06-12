@@ -11,6 +11,8 @@ from autobahn.twisted.util import sleep
 
 from pubsub_boiler import init_pubsub
 
+from quick_grab import HarpoonLagoon
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,14 +25,23 @@ class Component(ApplicationSession):
 
    @inlineCallbacks
    def onJoin(self, details):
+       if not self.factory._myAppSession:
+           self.factory._myAppSession = self
+
        while True:
            try:
                data = self.queue.get_nowait()
+               print "published", data
                self.publish('com.myapp.topic1', data)
            except Empty:
                pass
 
-           yield sleep(0.1)
+           yield sleep(1)
+
+   def onLeave(self, details):
+       if self.factory._myAppSession == self:
+           self.factory._myAppSession = None
+
 
    def onDisconnect(self):
        reactor.stop()
@@ -38,7 +49,8 @@ class Component(ApplicationSession):
 
 class Publisher:
     def __init__(self, queue, lock):
-        self.reactor = init_pubsub(Component, queue)
+        self.reactor, self.session_factory = init_pubsub(Component, queue)
+        #print "publisher session_factory", self.session_factory
 
     def run(self):
         ## now enter the Twisted reactor loop
@@ -51,6 +63,11 @@ def publisher_func(queue, lock):
     
 
 def generator_func(queue, lock):
+
+    hl = HarpoonLagoon(queue, lock)
+    hl.run()
+
+
     counter = 0 
     while True:
         data = [
@@ -59,8 +76,18 @@ def generator_func(queue, lock):
             [ counter + 10, None, counter + 10]
             ]
 
-        print "sending", data
         queue.put(data)
+
+        #print "session_factory", session_factory
+        # if session_factory:
+        #     if session_factory._myAppSession:
+        #         print "published", data
+
+        #         session_factory._myAppSession.publish('com.myapp.topic1', data)
+        #     else:
+        #         print("no session")
+
+
         counter += 1
         counter = counter % 500
         time.sleep(.1)

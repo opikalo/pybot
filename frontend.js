@@ -31,17 +31,14 @@ function drawChart() {
         url: 'ws://127.0.0.1:8080/ws',
         realm: 'realm1'}
                                             );
+    var data;
 
     connection.onopen = function (session) {
 
-        var received = 0;
-
         function onevent1(args) {
-            received += 1;
             data = google.visualization.arrayToDataTable(args[0]);
 
-            //console.log("Got event:", args[0]);
-
+            console.log("Got event:", args[0]);
             chart.draw(data, options);
         }
 
