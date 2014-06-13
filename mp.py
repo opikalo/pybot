@@ -48,7 +48,7 @@ def display(q, l):
 
             # fill in the axes rectangle
             fig.canvas.blit(ax.bbox)
-
+            time.sleep(1)
         else:
             fig.canvas.draw()
 

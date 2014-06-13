@@ -11,6 +11,9 @@ import win32api,win32con
 
 
 import time
+
+from nose.tools import eq_
+
 import matplotlib
 
 from matplotlib.pylab import subplots,close
@@ -26,6 +29,36 @@ class NoGameScreenFound(Error):
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+
+def pack_data(pos_x, pos_y):
+    d = {}
+    for x in pos_x:
+        d[x] = [None]*len(pos_x)
+    
+    for i, (x, y) in enumerate(zip(pos_x, pos_y)):
+        d[x][i] = y
+    
+    chart_data = []
+
+    for x, y in d.iteritems():
+        chart_data.append([x] + y)
+
+    return chart_data
+
+def test_pack_data():
+    pos_x = [1, 1, 3, 4, 5]
+    pos_y = [4, 5, 6, 7, 9]
+
+    expected_data = [
+        [1, 4, 5, None, None, None],
+        [3, None, None, 6, None, None],
+        [4, None, None, None, 7, None],
+        [5, None, None, None, None, 9]
+        ]
+    
+    eq_(pack_data(pos_x, pos_y), expected_data)
+        
+    
 
 def find_best_image(img_rgb, template):
     img_gray = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2GRAY)
@@ -109,12 +142,20 @@ class HarpoonLagoon(object):
     def find_large_tuna(self):
         pos_x = []
         pos_y = []
-        for t in [self.t1,]: # self.p1
+        for t in [self.t1, self.t2, self.p1, self.p2]: # self.p1
             for tuna in find_images(self.snapshot, t, 0.6):
+                if len(pos_x) > 1:
+                    break
+
                 pos_x.append(tuna[0])
                 pos_y.append(tuna[1])
-                
-        self.pos_queue.put([pos_x, pos_y])
+
+
+        if pos_x:
+            data = [['x', 'y1', 'y2']] + pack_data(pos_x, pos_y)
+        
+            self.pos_queue.put(data)
+            time.sleep(1)
 
                 #self.mouse_pos(tuna[0], tuna[1])
 
